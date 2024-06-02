@@ -1,12 +1,8 @@
 #!/usr/bin/python3
 """
-BaseModel Module Docstring:
-Defines the BaseModel class,which serves as the foundation
-for other model classes in the application.
-This class encapsulates common attributes and behaviors such as initialization,
-serialization, and interaction with the storage layer.
+Contains class BaseModel
 """
-import inspect
+
 from datetime import datetime
 import models
 from os import getenv
@@ -24,21 +20,14 @@ else:
 
 
 class BaseModel:
-    """BaseModel Class Definition:
-    The base class for all models in the application,
-    providing common functionality.
-    Inherits from SQLAlchemy's declarative_base
-    if using a database storage system, otherwise inherits from object.
-    """
+    """The BaseModel class from which future classes will be derived"""
     if models.storage_t == "db":
         id = Column(String(60), primary_key=True)
         created_at = Column(DateTime, default=datetime.utcnow)
         updated_at = Column(DateTime, default=datetime.utcnow)
 
     def __init__(self, *args, **kwargs):
-        """Initializes a new instance of the BaseModel class.
-        Accepts keyword arguments to set initial attribute values.
-        Generates unique IDs and sets timestamps accordingly."""
+        """Initialization of the base model"""
         if kwargs:
             for key, value in kwargs.items():
                 if key != "__class__":
@@ -59,7 +48,7 @@ class BaseModel:
             self.updated_at = self.created_at
 
     def __str__(self):
-        """String rep of the BaseModel class"""
+        """String representation of the BaseModel class"""
         return "[{:s}] ({:s}) {}".format(self.__class__.__name__, self.id,
                                          self.__dict__)
 
@@ -69,12 +58,8 @@ class BaseModel:
         models.storage.new(self)
         models.storage.save()
 
-    def to_dict(self):
-        """ Converts the instance to a dictionary rep.
-        Formats datetime objects to a string rep for compatibility.
-        Omits certain internal attributes and sensitive information
-        unless explicitly needed.
-        """
+    def to_dict(self, save_fs=None):
+        """returns a dictionary containing all keys/values of the instance"""
         new_dict = self.__dict__.copy()
         if "created_at" in new_dict:
             new_dict["created_at"] = new_dict["created_at"].strftime(time)
@@ -83,16 +68,11 @@ class BaseModel:
         new_dict["__class__"] = self.__class__.__name__
         if "_sa_instance_state" in new_dict:
             del new_dict["_sa_instance_state"]
-        frame = inspect.currentframe().f_back
-        func_name = frame.f_code.co_name
-        class_name = ''
-        if 'self' in frame.f_locals:
-            class_name = frame.f_locals["self"].__class__.__name__
-        is_fs_writing = func_name == 'save' and class_name == 'FileStorage'
-        if 'password' in new_dict and not is_fs_writing:
-            del new_dict['password']
+        if save_fs is None:
+            if "password" in new_dict:
+                del new_dict["password"]
         return new_dict
 
     def delete(self):
-        """remove the current instance from the storage"""
+        """delete the current instance from the storage"""
         models.storage.delete(self)
